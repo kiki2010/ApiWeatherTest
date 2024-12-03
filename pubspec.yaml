@@ -39,6 +39,9 @@ dependencies:
   #geolocator: https://pub.dev/packages/geolocator/install
   geolocator: ^13.0.2
 
+  #http para obtner datos de internet
+  http: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
