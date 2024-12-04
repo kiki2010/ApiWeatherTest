@@ -30,7 +30,7 @@ class _HomePageState extends State<HomePage> {
   String longitude = ""; // Variable to store longitude
   String apiResponse = "Loading data..."; // Variable to store API response
 
-  final String apiKey = "026cda1f35b54cddacda1f35b53cdda3"; // Your API key
+  final String apiKey = "..."; // Your API key
 
   @override
   void initState() {
