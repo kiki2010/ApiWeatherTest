@@ -87,8 +87,6 @@ class _HomePageState extends State<HomePage> {
     final String apiUrl =
         "https://api.weather.com/v3/location/near?geocode=$latitude,$longitude&product=PWS&format=json&apiKey=$apiKey";
     
-    final String StationApiUrl = "https://api.weather.com/v2/pws/observations/current?stationId=${bestStation['stationId']}}&format=json&units=e&apiKey=$apiKey";
-    
     try {
       final response = await http.get(Uri.parse(apiUrl)); // Make the API request
 
@@ -154,11 +152,14 @@ class _HomePageState extends State<HomePage> {
 
   }
 
+  //funtion for obtaining weather station data
   Future<void> fetchStationData(String stationId) async {
+    //Api URL
     final String observationApiUrl = 
       "https://api.weather.com/v2/pws/observations/current?stationId=${bestStation['stationId']}&format=json&units=m&apiKey=$apiKey"
     ;
 
+    //get response and map data
     try {
       final response = await http.get(Uri.parse(observationApiUrl));
 
@@ -220,6 +221,7 @@ class _HomePageState extends State<HomePage> {
             ] else
               const Text("No stations available"),
             
+            //show data when recived from the Weather Station
             if (observationData.isNotEmpty) ...[
               Text("Local Time: ${observationData['LocalTime']}"),
               Text("Neighborhood: ${observationData['Neighborhood']}"),
