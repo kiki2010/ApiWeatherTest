@@ -29,8 +29,10 @@ class _HomePageState extends State<HomePage> {
   String latitude = ""; // Variable to store latitude
   String longitude = ""; // Variable to store longitude
   String apiResponse = "Loading data..."; // Variable to store API response
+  Map<String, dynamic> bestStation = {}; // Variable for the best station map
+  Map<String, dynamic> observationData = {}; //variable for the observation api data
 
-  final String apiKey = "..."; // Your API key
+  final String apiKey = "026cda1f35b54cddacda1f35b53cdda3"; // Your API key
 
   @override
   void initState() {
@@ -84,13 +86,48 @@ class _HomePageState extends State<HomePage> {
   Future<void> fetchApiData(double lat, double lon) async {
     final String apiUrl =
         "https://api.weather.com/v3/location/near?geocode=$latitude,$longitude&product=PWS&format=json&apiKey=$apiKey";
-
+    
+    final String StationApiUrl = "https://api.weather.com/v2/pws/observations/current?stationId=${bestStation['stationId']}}&format=json&units=e&apiKey=$apiKey";
+    
     try {
       final response = await http.get(Uri.parse(apiUrl)); // Make the API request
 
       if (response.statusCode == 200) {
         // Decode the JSON response
         final data = json.decode(response.body);
+
+        // The data we're going to use from the first API
+        final stationsIds = data['location']['stationId'];
+        final updateTimes = data['location']['updateTimeUtc'];
+        final distances = data['location']['distanceKm'];
+
+        // We map the stations
+        final List<Map<String, dynamic>> stations = [];
+        for (int i = 0; i < stationsIds.length; i++) {
+        stations.add({
+          'stationId': stationsIds[i].toString(),
+          'updateTime': updateTimes[i],
+          'distance': distances[i].toDouble(),
+        });
+      }
+
+      // Sort the stations by update time, descending
+      stations.sort((a, b) => b['updateTime'].compareTo(a['updateTime']));
+
+      // Select the station with the most recent update
+      setState(() {
+        bestStation = stations.first; // Take the station with the most recent update
+      });
+
+
+        // Refresh and print the data
+        setState(() {
+          this.bestStation = bestStation;
+        });
+        print("Estación seleccionada:");
+        print("ID: ${bestStation['stationId']}");
+        print("Última actualización: ${bestStation['updateTime']}");
+        print("Distancia: ${bestStation['distance']} km");
 
         setState(() {
           apiResponse = "Data retrieved:\n${data.toString()}"; // Display the API data
@@ -105,7 +142,51 @@ class _HomePageState extends State<HomePage> {
         apiResponse = "Error connecting to the API: $e"; // Handle connection errors
       });
     }
+
+    //best state validation 
+    if (bestStation.isNotEmpty && bestStation.containsKey('stationId')){
+      await fetchStationData(bestStation['stationId']);
+    } else {
+      setState(() {
+        apiResponse = "No valid station";
+      });
+    }
+
   }
+
+  Future<void> fetchStationData(String stationId) async {
+    final String observationApiUrl = 
+      "https://api.weather.com/v2/pws/observations/current?stationId=${bestStation['stationId']}&format=json&units=m&apiKey=$apiKey"
+    ;
+
+    try {
+      final response = await http.get(Uri.parse(observationApiUrl));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+
+        final observation = data['observations'] [0];
+
+        setState(() {
+          observationData = {
+            "LocalTime": observation['obsTimeLocal'],
+            "Neighborhood": observation['neighborhood'],
+            "Country": observation['country'],
+            "Humidity": observation['humidity'],
+            "Temperature": observation['metric'] ['temp'],
+            "windSpeed": observation['metric'] ['windSpeed'],
+            "precipTotal": observation['metric'] ['precipTotal'],
+          };
+        });
+      }
+    } catch (e) {
+      print("Error: $e");
+    } finally {
+      print('always');
+    }
+  }
+
+  
 
   @override
   Widget build(BuildContext context) {
@@ -122,11 +203,33 @@ class _HomePageState extends State<HomePage> {
             Text("Latitude: $latitude"), // Display latitude
             Text("Longitude: $longitude"), // Display longitude
             const SizedBox(height: 20), // Add some spacing
+            
+            /*
             Text("API Response:"),
             Text(
               apiResponse, // Display the API response
               textAlign: TextAlign.center,
             ),
+            */
+
+            // When we get the optimal station, show the selected ID and update time
+            if (bestStation.isNotEmpty) ...[
+              Text("Selected Station ID: ${bestStation['stationId']}"),
+              Text("Última actualización: ${bestStation['updateTime']}"),
+              Text("Distancia: ${bestStation['distance']} km"),
+            ] else
+              const Text("No stations available"),
+            
+            if (observationData.isNotEmpty) ...[
+              Text("Local Time: ${observationData['LocalTime']}"),
+              Text("Neighborhood: ${observationData['Neighborhood']}"),
+              Text("Country: ${observationData['Country']}"),
+              Text("Humidity: ${observationData['Humidity']} %"),
+              Text("Temperature: ${observationData['Temperature']} °C "),
+              Text("Wind Speed: ${observationData['windSpeed']} km/h"),
+              Text("Precipitation: ${observationData['precipTotal']} mm"),
+            ] else
+              const Text("No stations available"),
           ],
         ),
       ),
