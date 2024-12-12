@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart'; // Library for obtaining geolocation
 import 'package:http/http.dart' as http; // Library for making HTTP requests
@@ -38,6 +40,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     getCurrentPosition(); // Get user's location when the app starts
+    week();
   }
 
   // Method to determine the user's location with permission handling
@@ -187,7 +190,41 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  
+  void week(){
+    //what day is today?
+  DateTime today = DateTime.now();
+
+  //What day was 7 days ago?
+  DateTime sevenDaysAgo = today.subtract(Duration(days: 7));
+
+  //What day was 6 days ago?
+  DateTime sixDaysAgo = today.subtract(Duration(days: 6));
+
+  //What day was 5 days ago?
+  DateTime fiveDaysAgo = today.subtract(Duration(days: 5));
+
+  //What day was 4 days ago?
+  DateTime fourDaysAgo = today.subtract(Duration(days: 4));
+
+  //What day was 3 days ago?
+  DateTime threeDaysAgo = today.subtract(Duration(days: 3));
+
+  //What day was 2 days ago?
+  DateTime twoDaysAgo = today.subtract(Duration(days: 2));
+
+  //What day was 1 day ago?
+  DateTime oneDayAgo = today.subtract(Duration(days: 1));
+
+  //print data
+  print("Today: $today");
+  print("7 days ago: $sevenDaysAgo");
+  print("6 days ago: $sixDaysAgo");
+  print("5 days ago: $fiveDaysAgo");
+  print("4 days ago: $fourDaysAgo");
+  print("3 days ago: $threeDaysAgo");
+  print("2 days ago: $twoDaysAgo");
+  print("1 day ago: $oneDayAgo");
+  }
 
   @override
   Widget build(BuildContext context) {
