@@ -34,7 +34,7 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic> bestStation = {}; // Variable for the best station map
   Map<String, dynamic> observationData = {}; //variable for the observation api data
 
-  final String apiKey = "026cda1f35b54cddacda1f35b53cdda3"; // Your API key
+  final String apiKey = "..."; // Your API key
 
   @override
   void initState() {
