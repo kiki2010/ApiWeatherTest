@@ -196,34 +196,38 @@ class _HomePageState extends State<HomePage> {
 
   //Weather summary
   Future<void> fetchWeekData(String stationId) async {
-  // URL de la API
+  // URL of the API
   final String weekAPIUrl =
       "https://api.weather.com/v2/pws/dailysummary/7day?stationId=IVILLA166&format=json&units=m&apiKey=$apiKey";
 
   try {
+    //Call Api
     final responseWeekApi = await http.get(Uri.parse(weekAPIUrl));
 
+    //If we get a response
     if (responseWeekApi.statusCode == 200) {
+      //Decode the JSON
       final dataWeekApi = json.decode(responseWeekApi.body);
+      //get data
       final summaries = dataWeekApi['summaries'];
 
       if (summaries != null) {
         Map<DateTime, List<dynamic>> groupedByDay = {};
 
         for (var entry in summaries) {
-          // Extraemos y parseamos la fecha correctamente
+          // get the dates
           String obsDateStr = entry['obsTimeLocal'].split(' ')[0];
           DateTime obsDate = DateFormat('yyyy-MM-dd').parse(obsDateStr);
 
           groupedByDay.putIfAbsent(obsDate, () => []).add(entry);
         }
 
-        // Variables para cálculos
+        // Variables for the calculations
         double totalPrecipitation = 0;
         int daysWithData = 0;
         List<double> precipitationValues = [];
 
-        // Recorremos los datos agrupados
+        // Browse throght the saved data
         groupedByDay.forEach((date, entries) {
           List<double> precipTotal = entries
               .where((e) => e['metric']?['precipTotal'] != null)
@@ -233,22 +237,23 @@ class _HomePageState extends State<HomePage> {
           double dailyPrecipitation =
               precipTotal.isNotEmpty ? precipTotal.reduce((a, b) => a + b) : 0;
 
-          // Actualizamos cálculos
+          // Refresh data
           totalPrecipitation += dailyPrecipitation;
           if (dailyPrecipitation > 0) daysWithData++;
           precipitationValues.add(dailyPrecipitation);
         });
 
-        // Calculamos promedio y desviación estándar
+        // Calculate avg and standar deviation
         double avgPrecipitation = totalPrecipitation / 7;
 
         double stdDev = precipitationValues.standardDeviation;
 
+        //Calculate the spi
         double spi = stdDev > 0
             ? (totalPrecipitation - avgPrecipitation) / stdDev
             : 0;
 
-        // Actualizamos el estado
+        // Refresh states
         setState(() {
           observationData['totalPrecipitation'] = totalPrecipitation;
           observationData['avgPrecipitation'] = avgPrecipitation;
@@ -318,6 +323,12 @@ class _HomePageState extends State<HomePage> {
             ] else
               const Text("No stations available"),
             
+            if (observationData.containsKey('totalPrecipitation')) ...[
+                        Text("Total Precipitation: ${observationData['totalPrecipitation']} mm"),
+                        Text("Avg Precipitation: ${observationData['avgPrecipitation']} mm"),
+                        Text("Standard Deviation: ${observationData['stdDev']} mm"),
+                        Text("SPI: ${observationData['SPI']}"),
+            ],
           ],
         ),
       ),
