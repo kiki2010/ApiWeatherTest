@@ -42,6 +42,13 @@ dependencies:
   #http para obtner datos de internet
   http: ^1.0.0
 
+  statistics: ^1.1.3
+  
+  intl: ^0.20.1
+
+dependency_overrides:
+  intl: ^0.20.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

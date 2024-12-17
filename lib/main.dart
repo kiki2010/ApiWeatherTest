@@ -1,9 +1,13 @@
-import 'dart:ffi';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart'; // Library for obtaining geolocation
 import 'package:http/http.dart' as http; // Library for making HTTP requests
 import 'dart:convert'; // Library for working with JSON
+
+//import 'package:intl/intl.dart';
+import 'package:statistics/statistics.dart';
+import 'package:intl/intl.dart';
 
 void main() => runApp(const MyApp());
 
@@ -34,13 +38,12 @@ class _HomePageState extends State<HomePage> {
   Map<String, dynamic> bestStation = {}; // Variable for the best station map
   Map<String, dynamic> observationData = {}; //variable for the observation api data
 
-  final String apiKey = "..."; // Your API key
+  final String apiKey = "026cda1f35b54cddacda1f35b53cdda3"; // Your API key
 
   @override
   void initState() {
     super.initState();
     getCurrentPosition(); // Get user's location when the app starts
-    week();
   }
 
   // Method to determine the user's location with permission handling
@@ -123,7 +126,7 @@ class _HomePageState extends State<HomePage> {
 
         // Refresh and print the data
         setState(() {
-          this.bestStation = bestStation;
+          bestStation = bestStation;
         });
         print("Estación seleccionada:");
         print("ID: ${bestStation['stationId']}");
@@ -147,12 +150,13 @@ class _HomePageState extends State<HomePage> {
     //best state validation 
     if (bestStation.isNotEmpty && bestStation.containsKey('stationId')){
       await fetchStationData(bestStation['stationId']);
+      await fetchWeekData(bestStation['stationId']);
     } else {
       setState(() {
         apiResponse = "No valid station";
       });
     }
-
+    
   }
 
   //funtion for obtaining weather station data
@@ -190,41 +194,85 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void week(){
-    //what day is today?
-  DateTime today = DateTime.now();
+  //Weather summary
+  Future<void> fetchWeekData(String stationId) async {
+  // URL de la API
+  final String weekAPIUrl =
+      "https://api.weather.com/v2/pws/dailysummary/7day?stationId=IVILLA166&format=json&units=m&apiKey=$apiKey";
 
-  //What day was 7 days ago?
-  DateTime sevenDaysAgo = today.subtract(Duration(days: 7));
+  try {
+    final responseWeekApi = await http.get(Uri.parse(weekAPIUrl));
 
-  //What day was 6 days ago?
-  DateTime sixDaysAgo = today.subtract(Duration(days: 6));
+    if (responseWeekApi.statusCode == 200) {
+      final dataWeekApi = json.decode(responseWeekApi.body);
+      final summaries = dataWeekApi['summaries'];
 
-  //What day was 5 days ago?
-  DateTime fiveDaysAgo = today.subtract(Duration(days: 5));
+      if (summaries != null) {
+        Map<DateTime, List<dynamic>> groupedByDay = {};
 
-  //What day was 4 days ago?
-  DateTime fourDaysAgo = today.subtract(Duration(days: 4));
+        for (var entry in summaries) {
+          // Extraemos y parseamos la fecha correctamente
+          String obsDateStr = entry['obsTimeLocal'].split(' ')[0];
+          DateTime obsDate = DateFormat('yyyy-MM-dd').parse(obsDateStr);
 
-  //What day was 3 days ago?
-  DateTime threeDaysAgo = today.subtract(Duration(days: 3));
+          groupedByDay.putIfAbsent(obsDate, () => []).add(entry);
+        }
 
-  //What day was 2 days ago?
-  DateTime twoDaysAgo = today.subtract(Duration(days: 2));
+        // Variables para cálculos
+        double totalPrecipitation = 0;
+        int daysWithData = 0;
+        List<double> precipitationValues = [];
 
-  //What day was 1 day ago?
-  DateTime oneDayAgo = today.subtract(Duration(days: 1));
+        // Recorremos los datos agrupados
+        groupedByDay.forEach((date, entries) {
+          List<double> precipTotal = entries
+              .where((e) => e['metric']?['precipTotal'] != null)
+              .map((e) => e['metric']['precipTotal'] as double)
+              .toList();
 
-  //print data
-  print("Today: $today");
-  print("7 days ago: $sevenDaysAgo");
-  print("6 days ago: $sixDaysAgo");
-  print("5 days ago: $fiveDaysAgo");
-  print("4 days ago: $fourDaysAgo");
-  print("3 days ago: $threeDaysAgo");
-  print("2 days ago: $twoDaysAgo");
-  print("1 day ago: $oneDayAgo");
+          double dailyPrecipitation =
+              precipTotal.isNotEmpty ? precipTotal.reduce((a, b) => a + b) : 0;
+
+          // Actualizamos cálculos
+          totalPrecipitation += dailyPrecipitation;
+          if (dailyPrecipitation > 0) daysWithData++;
+          precipitationValues.add(dailyPrecipitation);
+        });
+
+        // Calculamos promedio y desviación estándar
+        double avgPrecipitation = totalPrecipitation / 7;
+
+        double stdDev = precipitationValues.standardDeviation;
+
+        double spi = stdDev > 0
+            ? (totalPrecipitation - avgPrecipitation) / stdDev
+            : 0;
+
+        // Actualizamos el estado
+        setState(() {
+          observationData['totalPrecipitation'] = totalPrecipitation;
+          observationData['avgPrecipitation'] = avgPrecipitation;
+          observationData['stdDev'] = stdDev;
+          observationData['SPI'] = spi.toStringAsFixed(2);
+        });
+
+        print("Total Precipitation: $totalPrecipitation");
+        print("Average Precipitation: $avgPrecipitation");
+        print("Standard Deviation: $stdDev");
+        print("SPI Value: ${spi.toStringAsFixed(2)}");
+      } else {
+        print("No se encontraron resúmenes en la respuesta de la API.");
+      }
+    } else {
+      print("Error al obtener datos: ${responseWeekApi.statusCode}");
+    }
+  } catch (e) {
+    print("Error: $e");
+  } finally {
+    print('Finalizado fetchWeekData');
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -269,6 +317,7 @@ class _HomePageState extends State<HomePage> {
               Text("Precipitation: ${observationData['precipTotal']} mm"),
             ] else
               const Text("No stations available"),
+            
           ],
         ),
       ),
